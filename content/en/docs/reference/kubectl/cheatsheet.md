@@ -193,6 +193,11 @@ kubectl get pods --show-labels
 # Check which nodes are ready
 JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}' \
  && kubectl get nodes -o jsonpath="$JSONPATH" | grep "Ready=True"
+ 
+ #Check the nodes in noschedule taint mode
+ JSONPATH='{range .items[*]}{.metadata.name}{"\t"}{.spec.taints[*].effect}{"\n"}{end}' && kubectl get nodes -o jsonpath="$JSONPATH" | grep -v NoSchedule
+ 
+ kubectl get node -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.taints[*].effect}{"\n"}{end}' | grep -v NoSchedule
 
 # Output decoded secrets without external tools
 kubectl get secret my-secret -o go-template='{{range $k,$v := .data}}{{"### "}}{{$k}}{{"\n"}}{{$v|base64decode}}{{"\n\n"}}{{end}}'
@@ -273,6 +278,24 @@ kubectl edit svc/docker-registry                      # Edit the service named d
 KUBE_EDITOR="nano" kubectl edit svc/docker-registry   # Use an alternative editor
 ```
 
+#Add a sidecar container
+	  Sidecars
+    - name: sidecar
+    image: kodekloud/filebeat-configured
+    volumeMounts:
+    - mountPath: /var/log/event-simulator/
+      name: log-volume
+      
+#Naming a port in a deployment
+   Naming a deployment port
+ containers:
+ - name: nginx
+   image: nginx:latest
+   ports:
+    - name: nginx-port
+      containerPort: 80
+      protocol: TCP
+
 ## Scaling resources
 
 ```bash
@@ -318,6 +341,10 @@ kubectl exec --stdin --tty my-pod -- /bin/sh        # Interactive shell access t
 kubectl exec my-pod -c my-container -- ls /         # Run command in existing pod (multi-container case)
 kubectl top pod POD_NAME --containers               # Show metrics for a given pod and its containers
 kubectl top pod POD_NAME --sort-by=cpu              # Show metrics for a given pod and sort it by 'cpu' or 'memory'
+#Find the pods with the highest CPU usage
+kubectl top po -A --sort-by=cpu 
+
+kubectl top pod --sort-by cpu --no-headers=true | head -1 | awk '{print $1}'
 ```
 
 ## Interacting with Deployments and Services
